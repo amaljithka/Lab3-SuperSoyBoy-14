@@ -3060,7 +3060,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56e18a5999321084f915c5c7516a9576, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  levelName: super awesome level
+  levelName: test 1
 --- !u!4 &1429669183 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4000012600439170, guid: da0922812e206c047a57c2a8ddbdbaa8,
@@ -3814,6 +3814,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerName: 
+  buttonPrefab: {fileID: 0}
 --- !u!4 &1849773285
 Transform:
   m_ObjectHideFlags: 0
