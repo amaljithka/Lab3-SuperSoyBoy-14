@@ -101,16 +101,20 @@ public class GameManager : MonoBehaviour
 
     // Update is called once per frame
     void Update () {
-	
-	}
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            SceneManager.LoadScene("Menu");
+        }
+    }
 
     public List<PlayerTimeEntry> LoadPreviousTimes()
     {
         
         try
         {
+            var levelName = Path.GetFileName(selectedLevel);
             var scoresFile = Application.persistentDataPath +
-            "/" + playerName + "_times.dat";
+            "/" + playerName + "_" + levelName + "_times.dat";
             using (var stream = File.Open(scoresFile, FileMode.Open))
             {
                 var bin = new BinaryFormatter();
@@ -136,8 +140,9 @@ public class GameManager : MonoBehaviour
         newTime.time = time;
       
         var bFormatter = new BinaryFormatter();
+        var levelName = Path.GetFileName(selectedLevel);
         var filePath = Application.persistentDataPath +
-        "/" + playerName + "_times.dat";
+        "/" + playerName + "_" + levelName + "_times.dat";
         using (var file = File.Open(filePath, FileMode.Create))
         {
             times.Add(newTime);
@@ -147,26 +152,92 @@ public class GameManager : MonoBehaviour
 
     public void DisplayPreviousTimes()
     {
-        
         var times = LoadPreviousTimes();
+        var levelName = Path.GetFileName(selectedLevel);
+        if (levelName != null)
+        {
+            levelName = levelName.Replace(".json", "");
+        }
         var topThree = times.OrderBy(time => time.time).Take(3);
-        
         var timesLabel = GameObject.Find("PreviousTimes")
         .GetComponent<Text>();
-        
-        timesLabel.text = "BEST TIMES \n";
+        timesLabel.text = levelName + "\n";
+        timesLabel.text += "BEST TIMES \n";
         foreach (var time in topThree)
         {
-            timesLabel.text += time.entryDate.ToShortDateString() +
-            ": " + time.time + "\n";
+            timesLabel.text += time.entryDate.ToShortDateString()
+            + ": " + time.time + "\n";
         }
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode loadsceneMode)
     {
-        if (scene.name == "Game")
+        if (!string.IsNullOrEmpty(selectedLevel)
+        && scene.name == "Game")
         {
+            Debug.Log("Loading level content for: " + selectedLevel);
+            LoadLevelContent();
             DisplayPreviousTimes();
+        }
+        if (scene.name == "Menu")
+        {
+            DiscoverLevels();
+        }
+    }
+
+    private void LoadLevelContent()
+    {
+        var existingLevelRoot = GameObject.Find("Level");
+        Destroy(existingLevelRoot);
+        var levelRoot = new GameObject("Level");
+
+        // 1
+        var levelFileJsonContent = File.ReadAllText(selectedLevel);
+        var levelData = JsonUtility.FromJson<LevelDataRepresentation>(
+        levelFileJsonContent);
+        // 2
+        foreach (var li in levelData.levelItems)
+        {
+            // 3
+            var pieceResource =
+            Resources.Load("Prefabs/" + li.prefabName);
+            if (pieceResource == null)
+            {
+                Debug.LogError("Cannot find resource: " + li.prefabName);
+            }
+            // 4
+            var piece = (GameObject)Instantiate(pieceResource, li.position, Quaternion.identity);
+            var pieceSprite = piece.GetComponent<SpriteRenderer>();
+            if (pieceSprite != null)
+            {
+                pieceSprite.sortingOrder = li.spriteOrder;
+                pieceSprite.sortingLayerName = li.spriteLayer;
+                pieceSprite.color = li.spriteColor;
+            }
+            // 5
+            piece.transform.parent = levelRoot.transform;
+            piece.transform.position = li.position;
+            piece.transform.rotation = Quaternion.Euler(li.rotation.x, li.rotation.y, li.rotation.z);
+            piece.transform.localScale = li.scale;
+            var SoyBoy = GameObject.Find("SoyBoy");
+            SoyBoy.transform.position = levelData.playerStartPosition;
+            Camera.main.transform.position = new Vector3(SoyBoy.transform.position.x, SoyBoy.transform.position.y, Camera.main.transform.position.z);
+            // 1
+            var camSettings = FindObjectOfType<CameraLerpToTransform>();
+            // 2
+            if (camSettings != null)
+            {
+                camSettings.cameraZDepth =
+                levelData.cameraSettings.cameraZDepth;
+                camSettings.camTarget = GameObject.Find(
+                levelData.cameraSettings.cameraTrackTarget).transform;
+                camSettings.maxX = levelData.cameraSettings.maxX;
+                camSettings.maxY = levelData.cameraSettings.maxY;
+                camSettings.minX = levelData.cameraSettings.minX;
+                camSettings.minY = levelData.cameraSettings.minY;
+                camSettings.trackingSpeed =
+                levelData.cameraSettings.trackingSpeed;
+            }
         }
     }
 }
